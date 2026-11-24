@@ -41,10 +41,11 @@ DEFINE_BPF_PROG("skfilter/power_supply", AID_ROOT, AID_SYSTEM, skfilter_power_su
     // See also the kobject_uevent_env() implementation:
     // https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/lib/kobject_uevent.c?#n473
     //
-    // The upper bound of this loop has been chosen not to exceed the maximum
-    // number of instructions in a BPF program (BPF loops are unrolled).
+    // Linux 4.19 rejects BPF back-edges. Fully unroll this bounded scan and
+    // leave longer paths to the userspace filter below.
     #define LENGTH_PREFIX 16 // length of "ACTION=\0DEVPATH="
-    for (uint64_t i = sizeof(struct nlmsghdr) + LENGTH_PREFIX; i < 256; ++i) {
+    #pragma clang loop unroll(full)
+    for (uint64_t i = sizeof(struct nlmsghdr) + LENGTH_PREFIX; i < 128; ++i) {
 
         // 16 bytes is big enough to cover both
         uint64_t buf[2] = {};
